@@ -1,0 +1,188 @@
+
+
+#include <windows.h>startWidth
+#include<math.h>
+#include<iostream>
+#include<stack>
+#include<GL/glut.h>
+# pragma comment(linker,"/subsystem:\"console\" /entry:\"mainCRTStartup\"")
+using namespace std;
+GLubyte iPixel[3];
+
+//int startWidth, startHeight;定义画布初始坐标
+int  startWidth = -100;
+int startHeight =-100;
+int sizeHeight = 500;
+int sizeWidth = 500;
+GLubyte oldcolor[3] = { 0,0,0 };
+GLubyte newcolor[3] = { 255, 255, 255 };
+typedef struct {
+	int x;
+	int y;
+}Seed;
+
+//传入两个颜色的RGB值，比较是否相同，容差为dis
+bool sameColor(GLubyte a[3], GLubyte b[3]) {
+	//容差度
+	int dis = 10;
+	if (abs(a[0] - b[0]) <= dis && abs(a[1] - b[1]) <= dis && abs(a[2] - b[2]) <= dis) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+
+void SetPixel(int x, int y, GLubyte color[3]) {
+	//glPointSize(1);
+	
+	glBegin(GL_POINTS);
+	glColor3ub(color[0], color[1], color[2]);
+	glVertex2i(x, y);
+	glEnd();
+	Sleep(1);
+	glFlush();
+}
+
+void ScanLineFill4(int x, int y, GLubyte oldcolor[3], GLubyte newcolor[3]) {
+	int xl, xr, i;
+	bool spanNeedFill;
+	Seed pt;
+	stack<Seed>S;
+	//setstackempty(); 
+	S.empty();
+	pt.x = x; pt.y = y;
+	S.push(pt);
+	//stackpush(pt);
+	while (!S.empty()) {
+		pt = S.top();
+		S.pop();
+		y = pt.y;
+
+		x = pt.x;
+
+		glReadPixels(x - startWidth, y - startHeight, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &iPixel);
+		while (sameColor(iPixel, oldcolor)) {
+			SetPixel(x, y, newcolor);
+			x++;
+			glReadPixels(x - startWidth, y - startHeight, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &iPixel);
+		}
+
+		xr = x - 1;
+
+		x = pt.x - 1;
+		glReadPixels(x - startWidth, y - startHeight, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &iPixel);
+		while (sameColor(iPixel, oldcolor)) {
+			SetPixel(x, y, newcolor);
+			x--;
+			glReadPixels(x - startWidth, y - startHeight, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &iPixel);
+		}
+
+		xl = x + 1;
+
+		//处理上面一条扫描线
+		x = xl;
+		y = y + 1;
+		while (x < xr) {
+			spanNeedFill = FALSE;
+			glReadPixels(x - startWidth, y - startHeight, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &iPixel);
+			while (sameColor(iPixel, oldcolor)) {
+				spanNeedFill = true;
+				x++;
+				glReadPixels(x - startWidth, y - startHeight, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &iPixel);
+			}
+
+			if (spanNeedFill) {
+				pt.x = x - 1; pt.y = y;
+				S.push(pt);
+				//stackpush(pt);
+				spanNeedFill = FALSE;
+			}
+			glReadPixels(x -startWidth, y - startHeight, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &iPixel);
+			while (!sameColor(iPixel, oldcolor) && x < xr) {
+				x++;
+				glReadPixels(x - startWidth, y - startHeight, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &iPixel);
+			}
+
+
+		}//End of while(i<xr)
+
+		//下面扫描线
+		x = xl;
+		y = y - 2;
+		while (x < xr) {
+			spanNeedFill = FALSE;
+			glReadPixels(x - startWidth, y - startHeight, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &iPixel);
+			while (sameColor(iPixel, oldcolor)) {
+				spanNeedFill = true;
+				x++;
+				glReadPixels(x - startWidth, y - startHeight, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &iPixel);
+			}
+			if (spanNeedFill) {
+				pt.x = x - 1; pt.y = y;
+				S.push(pt);
+				//stackpush(pt);
+				spanNeedFill = FALSE;
+			}
+			glReadPixels(x - startWidth, y - startHeight, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &iPixel);
+			while (!sameColor(iPixel, oldcolor) && x < xr)
+			{
+				x++;
+				glReadPixels(x - startWidth, y - startHeight, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &iPixel);
+			}
+
+		}//End of while(i<xr)
+	}//End of while(!isstackempty)
+}
+
+
+void RenderScene(void) {
+	glClear(GL_COLOR_BUFFER_BIT);
+
+
+	glBegin(GL_LINE_LOOP);//绘制边界曲线
+	glColor3ub(newcolor[0], newcolor[1], newcolor[2]);
+		glVertex2f(0.0f, 0.0f);
+			glVertex2f(0.0f, 50.0f);//
+			glVertex2f(0.0f, 50.0f);//
+			glVertex2f(50.0f, 50.0f);//
+			glVertex2f(50.0f, 50.0f);//
+			glVertex2f(50.0f, 0.0f);//
+			glVertex2f(50.0f, 0.0f);//
+			glVertex2f(0.0f, 0.0f);//
+	/*	glColor3f(1.0, 0.0, 0.0);
+		glVertex2f(20, 20);
+		glColor3f(0.8, 0.7, 0.0);
+		glVertex2f(30, 20);
+		glColor3f(0.6, 1.0, 0.0);
+		glVertex2f(40, 20); */
+	glEnd();
+	glFlush();
+	ScanLineFill4(10, 20, oldcolor, newcolor);
+	glEnd();
+	glFlush();
+
+}
+
+//设置绘图的环境
+
+int main(int argc, char* argv[]) {
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	glutInitWindowSize(sizeWidth,sizeHeight );
+	glutInitWindowPosition(0, 0);
+	glutCreateWindow("栅格化画直线");
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glMatrixMode(GL_PROJECTION);//投影模型
+	gluOrtho2D(startWidth, startWidth+sizeWidth, startHeight, sizeHeight+startHeight);
+
+	glutDisplayFunc(RenderScene);
+
+	glutMainLoop();
+	return 0;
+
+
+}
+
+
